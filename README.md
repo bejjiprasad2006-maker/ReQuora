@@ -97,8 +97,6 @@ Load these models in LM Studio before starting RikuAI:
 | Chat | Architecture reasoning | `qwen/qwen3.5-9b` |
 | Embeddings | Document indexing & search | `text-embedding-nomic-embed-text-v1.5` |
 
-> After fine-tuning, point `LM_STUDIO_MODEL` at your custom model identifier. Keep training artifacts outside this repository.
-
 ### 3. Configure environment
 
 ```bash
@@ -158,15 +156,15 @@ Runs TypeScript checks and a production build.
 
 ```
 RikuAI/
-├── docs/                  # Knowledge base (auto-indexed)
-├── skills/                # Optional skill definitions (SKILL.md)
+├── docs/                  # Knowledge base (auto-indexed; add your own .md files)
+├── skills/                # Skill definitions (SKILL.md)
 ├── src/mastra/
-│   ├── agents/            # Architect agent & Telegram handlers
-│   ├── rag/               # Vector store configuration
-│   ├── config.ts          # Environment configuration
-│   ├── lm-studio.ts       # LM Studio client
-│   ├── workspace.ts       # Document indexing & search
-│   └── index.ts           # Mastra entry point
+│   ├── architect-agent.ts # Agent & Telegram handlers
+│   ├── prompts.ts         # System prompt
+│   ├── config.ts
+│   ├── lm-studio.ts
+│   ├── workspace.ts       # RAG + vector store
+│   └── index.ts
 ├── .env.example
 └── package.json
 ```

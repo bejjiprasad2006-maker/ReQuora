@@ -2,8 +2,13 @@ import { createTelegramAdapter } from '@chat-adapter/telegram';
 import { Agent } from '@mastra/core/agent';
 import type { ChannelHandler } from '@mastra/core/channels';
 import { Memory } from '@mastra/memory';
-import { config } from '../config';
-import { chatModel } from '../lm-studio';
+import { config } from './config';
+import { chatModel } from './lm-studio';
+import {
+  ARCHITECT_INSTRUCTIONS,
+  COMPACT_CHECKPOINT_PROMPT,
+  WORKING_MEMORY_TEMPLATE,
+} from './prompts';
 
 export const architectMemory = new Memory({
   options: {
@@ -11,13 +16,7 @@ export const architectMemory = new Memory({
     workingMemory: {
       enabled: true,
       scope: 'resource',
-      template: `# User and project context
-- Current project and objective
-- Confirmed requirements
-- Technical constraints
-- Decisions already made
-- Open questions
-- Preferred response style`,
+      template: WORKING_MEMORY_TEMPLATE,
     },
   },
 });
@@ -46,19 +45,14 @@ const telegramMessageHandler: ChannelHandler = async (
   }
 
   if (command === '/compact') {
-    const checkpoint = await architectAgent.generate(
-      'Create a compact checkpoint of this conversation. Preserve requirements, decisions, constraints, unresolved questions, and the next action. Return only the checkpoint.',
-      {
-        memory: { resource: userResourceId, thread: threadId },
-      },
-    );
+    const checkpoint = await architectAgent.generate(COMPACT_CHECKPOINT_PROMPT, {
+      memory: { resource: userResourceId, thread: threadId },
+    });
 
     await architectMemory.deleteThread(threadId);
     await architectAgent.generate(
-      `Use this checkpoint as the authoritative context for our continued work:\n\n${checkpoint.text}`,
-      {
-        memory: { resource: userResourceId, thread: threadId },
-      },
+      `Continue from this checkpoint:\n\n${checkpoint.text}`,
+      { memory: { resource: userResourceId, thread: threadId } },
     );
     await thread.post({
       markdown: 'Session compacted. Important context has been preserved.',
@@ -98,13 +92,7 @@ export const architectAgent = new Agent({
   id: 'architect-agent',
   name: 'AI Software Architect',
   description: 'A rigorous software architecture partner for designing and delivering production systems.',
-  instructions: `You are the project's AI Software Architect.
-
-Give concrete, implementation-ready guidance. Ask only questions that materially change the solution. Track confirmed requirements and decisions in working memory. Separate facts from assumptions. Prefer the smallest reliable design that can evolve. When recommending technology, explain the decisive tradeoff briefly. Never pretend a tool ran or a fact was verified when it was not.
-
-Use workspace search with topK 5 and vector mode before answering questions covered by the documents folder. Name the source files that informed your answer. Load a skill when one clearly matches the request.
-
-The primary interface is Telegram. Keep normal replies concise and readable on mobile. Use markdown formatting that works on Telegram: short headings, bullet lists, fenced code blocks, and brief tables only when necessary. The project-specific commands are /new and /compact.`,
+  instructions: ARCHITECT_INSTRUCTIONS,
   model: chatModel,
   defaultOptions: {
     modelSettings: {

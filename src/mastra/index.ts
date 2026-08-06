@@ -1,8 +1,7 @@
 import { Mastra } from '@mastra/core/mastra';
 import { LibSQLStore } from '@mastra/libsql';
-import { architectAgent } from './agents/architect-agent';
-import { architectureVectorStore } from './rag/vector-store';
-import { architectWorkspace } from './workspace';
+import { architectAgent } from './architect-agent';
+import { architectWorkspace, architectureVectorStore } from './workspace';
 
 export const mastra = new Mastra({
   agents: { architectAgent },

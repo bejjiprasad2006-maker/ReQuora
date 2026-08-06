@@ -1,7 +1,13 @@
 import { LocalFilesystem, Workspace } from '@mastra/core/workspace';
+import { LibSQLVector } from '@mastra/libsql';
 import { embedMany } from 'ai';
+import { config } from './config';
 import { embeddingModel } from './lm-studio';
-import { architectureVectorStore } from './rag/vector-store';
+
+export const architectureVectorStore = new LibSQLVector({
+  id: 'architecture-vector-store',
+  url: config.vector.databaseUrl,
+});
 
 export const architectWorkspace = new Workspace({
   id: 'architect-workspace',
