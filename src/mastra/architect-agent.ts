@@ -4,11 +4,15 @@ import type { ChannelHandler } from '@mastra/core/channels';
 import { Memory } from '@mastra/memory';
 import { config } from './config';
 import { chatModel } from './lm-studio';
-import {
-  ARCHITECT_INSTRUCTIONS,
-  COMPACT_CHECKPOINT_PROMPT,
-  WORKING_MEMORY_TEMPLATE,
-} from './prompts';
+import { ARCHITECT_PROMPT } from './prompts';
+
+const WORKING_MEMORY_TEMPLATE = `# Project context
+- Objective and confirmed requirements
+- Constraints and decisions made
+- Open questions`;
+
+const COMPACT_CHECKPOINT_PROMPT =
+  'Summarize this session: requirements, decisions, constraints, open questions, next action. Return only the checkpoint.';
 
 export const architectMemory = new Memory({
   options: {
@@ -92,14 +96,14 @@ export const architectAgent = new Agent({
   id: 'architect-agent',
   name: 'AI Software Architect',
   description: 'A rigorous software architecture partner for designing and delivering production systems.',
-  instructions: ARCHITECT_INSTRUCTIONS,
+  instructions: ARCHITECT_PROMPT,
   model: chatModel,
   defaultOptions: {
     modelSettings: {
       maxOutputTokens: 900,
     },
     providerOptions: {
-      lmStudio: { reasoningEffort: 'none' },
+      lmStudio: { reasoningEffort: 'medium' },
     },
   },
   memory: architectMemory,
