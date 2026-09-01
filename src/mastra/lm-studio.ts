@@ -8,4 +8,3 @@ export const lmStudio = createOpenAICompatible({
 });
 
 export const chatModel = lmStudio.chatModel(config.lmStudio.model);
-export const embeddingModel = lmStudio.embeddingModel(config.lmStudio.embeddingModel);

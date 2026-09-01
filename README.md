@@ -6,7 +6,7 @@
 [![LM Studio](https://img.shields.io/badge/Inference-LM%20Studio-0ea5e9)](https://lmstudio.ai)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-**RikuAI** is a local-first AI Software Architect — a reasoning agent that helps design, evaluate, and deliver production-grade systems. It runs entirely on your machine via LM Studio, grounds answers in your architecture documents, remembers context across sessions, and meets you on Telegram when you are away from the desk.
+**RikuAI** is a local-first finance requirements assistant. Two agents run in sequence: **Requirements Agent** lists software requirements; **SDLC Selection Agent** picks and justifies a lifecycle for that specification. Telegram and Studio workflow `requirements-then-sdlc` both use this pipeline. Only provenance-tracked material under `docs/ingested/` is indexed.
 
 ---
 
@@ -21,6 +21,19 @@ RikuAI is built for engineers who want an architecture partner that thinks in tr
 | **Persistent memory** | Tracks requirements, decisions, and open questions per user and thread |
 | **Telegram interface** | Streams responses to a private bot with `/new` and `/compact` session controls |
 | **Extensible skills** | Drop-in `SKILL.md` files extend behavior without code changes |
+
+## Finance agents
+
+There is no single “do everything” agent for the course demo.
+
+| Studio entry | Role |
+| --- | --- |
+| **Requirements Agent** | (i) Identify and list software requirements |
+| **SDLC Selection Agent** | (ii) Identify a suitable SDLC for that specification |
+| **requirements-then-sdlc** (Workflows tab) | Runs (i) then (ii) and concatenates the two documents |
+| **Riku Coordinator** | Telegram only; do not chat this for the evaluation |
+
+Start with `npm run dev`. In Studio open **Workflows → requirements-then-sdlc** and paste the loan-origination brief (`prompt`). When it finishes, open `artifacts/evaluation/latest.md` (Cmd+Shift+V) or `latest.html` in a browser — you do not copy one agent into the other. Confirm jurisdiction and legal conclusions with authorised reviewers.
 
 ---
 
@@ -50,10 +63,10 @@ RikuAI is built for engineers who want an architecture partner that thinks in tr
 | Layer | Technology | Role |
 | --- | --- | --- |
 | **Agent runtime** | [Mastra](https://mastra.ai) | Orchestrates the agent, memory, workspace, and channels |
-| **Inference** | [LM Studio](https://lmstudio.ai) | OpenAI-compatible local endpoint for chat and embeddings |
+| **Inference** | [LM Studio](https://lmstudio.ai) | OpenAI-compatible local chat model |
 | **Session storage** | LibSQL (`architect.db`) | Conversation history and working memory |
-| **Vector store** | LibSQL (`architecture-vectors.db`) | Semantic search over indexed documents |
-| **Knowledge base** | `docs/` | Architecture notes, ADRs, and reference material |
+| **Document search** | Mastra BM25 | Fast local retrieval over indexed source text |
+| **Knowledge base** | `docs/ingested/` | Original, provenance-tracked publisher material |
 | **Skills** | `skills/<name>/SKILL.md` | Optional domain playbooks loaded on demand |
 | **Messaging** | Telegram (`@chat-adapter/telegram`) | Mobile access with streaming replies |
 
@@ -61,9 +74,9 @@ RikuAI is built for engineers who want an architecture partner that thinks in tr
 
 ## How It Works
 
-1. **Startup** — Mastra boots the architect agent, connects to LM Studio, and auto-indexes every file under `docs/` into the vector store.
-2. **Query** — When you ask a question, the agent searches the workspace (topK 5) for relevant passages before generating a response.
-3. **Reasoning** — The model applies architecture-focused instructions: clarify only what matters, separate facts from assumptions, and prefer the smallest reliable design.
+1. **Startup** — Mastra boots the agents, connects to LM Studio, and BM25-indexes searchable text, Markdown, and YAML under `docs/ingested/`.
+2. **Query** — Each request BM25-searches the workspace (topK 5) in code and attaches the passages before the model writes.
+3. **Reasoning** — The model applies architecture-focused instructions: fill gaps with labeled assumptions, separate facts from guesses, and prefer the smallest reliable design.
 4. **Memory** — Working memory persists project context, confirmed requirements, and decisions per Telegram user and thread.
 5. **Delivery** — Replies stream to Telegram (or Mastra Studio locally). Source files are cited when RAG contributed to the answer.
 
@@ -95,7 +108,6 @@ Load these models in LM Studio before starting RikuAI:
 | Model | Purpose | Default identifier |
 | --- | --- | --- |
 | Chat | Architecture reasoning | `qwen/qwen3.5-9b` |
-| Embeddings | Document indexing & search | `text-embedding-nomic-embed-text-v1.5` |
 
 ### 3. Configure environment
 
@@ -113,7 +125,6 @@ Edit `.env` with your values:
 LM_STUDIO_BASE_URL=http://127.0.0.1:1234/v1
 LM_STUDIO_API_KEY=lm-studio
 LM_STUDIO_MODEL=qwen/qwen3.5-9b
-LM_STUDIO_EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
 
 # Telegram (optional — Mastra Studio works without it)
 TELEGRAM_BOT_TOKEN=
@@ -122,12 +133,11 @@ TELEGRAM_MODE=polling
 
 # Storage (defaults work for local development)
 MASTRA_DATABASE_URL=file:./architect.db
-MASTRA_VECTOR_DATABASE_URL=file:./architecture-vectors.db
 ```
 
 ### 4. Add knowledge
 
-Place text or Markdown files anywhere under `docs/`. They are chunked and indexed automatically on startup.
+Add source originals and mechanically extracted `.txt`, `.md`, or `.yaml` files under `docs/ingested/`, then update `docs/CORPUS_SOURCES.md` and `docs/CORPUS_SHA256.txt`.
 
 ### 5. Add skills (optional)
 
@@ -163,7 +173,7 @@ RikuAI/
 │   ├── prompts.ts         # System prompt
 │   ├── config.ts
 │   ├── lm-studio.ts
-│   ├── workspace.ts       # RAG + vector store
+│   ├── rag.ts             # BM25 retrieve + inject evidence
 │   └── index.ts
 ├── .env.example
 └── package.json
