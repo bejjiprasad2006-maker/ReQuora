@@ -1,115 +1,38 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { createStep, createWorkflow } from '@mastra/core/workflows';
-import { z } from 'zod';
-import { requirementsAgent, sdlcSelectionAgent } from './finance-agents';
-import { textFromGenerateResult } from './telegram-utils';
+﻿import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { briefSchema } from '../domain/schemas';
+import { prepareAnalysis, extractRequirements, selectLifecycle, exportAnalysis, preparedSchema, extractedSchema, plannedSchema, outputSchema } from '../domain/analysis';
+import { liveAgents } from './generation';
 import { workspaceRoot } from './workspace';
+import type { ProjectProfile } from '../domain/profile';
 
-const previewDir = join(workspaceRoot, 'artifacts/evaluation');
-
-const listRequirements = createStep({
-  id: 'list-requirements',
-  description: 'Requirements Agent lists software requirements.',
-  inputSchema: z.object({ prompt: z.string() }),
-  outputSchema: z.object({ requirements: z.string() }),
-  execute: async ({ inputData }) => {
-    const result = await requirementsAgent.generate(inputData.prompt);
-    const requirements = textFromGenerateResult(result);
-    if (!requirements) throw new Error('Requirements Agent returned no text');
-    return { requirements };
-  },
+const prepare = createStep({
+  id: 'prepare-ecommerce-brief', description: 'Validate and redact input; retrieve allowlisted domain evidence.',
+  inputSchema: briefSchema, outputSchema: preparedSchema,
+  execute: async ({ inputData }) => prepareAnalysis(inputData.prompt, workspaceRoot, [], inputData),
 });
-
-const selectSdlc = createStep({
-  id: 'select-sdlc',
-  description: 'SDLC Selection Agent chooses and justifies a lifecycle for the SRS.',
-  inputSchema: z.object({ requirements: z.string() }),
-  outputSchema: z.object({
-    requirements: z.string(),
-    sdlc: z.string(),
-    document: z.string(),
-  }),
-  execute: async ({ inputData }) => {
-    const result = await sdlcSelectionAgent.generate(
-      `Select a suitable SDLC for this specification.\n\n${inputData.requirements}`,
-    );
-    const sdlc = textFromGenerateResult(result);
-    if (!sdlc) throw new Error('SDLC Selection Agent returned no text');
-    return {
-      requirements: inputData.requirements,
-      sdlc,
-      document: `${inputData.requirements.trim()}\n\n---\n\n${sdlc.trim()}`,
-    };
-  },
+const requirements = createStep({
+  id: 'list-requirements', description: 'Agent (i): structured requirements, stories, use cases, risks, factors and reference checks.',
+  inputSchema: preparedSchema, outputSchema: extractedSchema,
+  execute: async ({ inputData }) => extractRequirements(inputData, liveAgents),
 });
-
-const writePreview = createStep({
-  id: 'write-preview',
-  description: 'Write Markdown and HTML previews under artifacts/evaluation.',
-  inputSchema: z.object({
-    requirements: z.string(),
-    sdlc: z.string(),
-    document: z.string(),
-  }),
-  outputSchema: z.object({
-    requirements: z.string(),
-    sdlc: z.string(),
-    document: z.string(),
-    markdownPath: z.string(),
-    htmlPath: z.string(),
-  }),
-  execute: async ({ inputData }) => {
-    await mkdir(previewDir, { recursive: true });
-    const markdownPath = join(previewDir, 'latest.md');
-    const htmlPath = join(previewDir, 'latest.html');
-    await writeFile(markdownPath, `${inputData.document.trim()}\n`, 'utf8');
-    await writeFile(htmlPath, htmlPreview(inputData.document), 'utf8');
-    return { ...inputData, markdownPath, htmlPath };
-  },
+const lifecycle = createStep({
+  id: 'select-sdlc', description: 'Rank seven models, then Agent (ii) explains the choice and builds delivery gates.',
+  inputSchema: extractedSchema, outputSchema: plannedSchema,
+  execute: async ({ inputData }) => selectLifecycle(inputData, liveAgents),
 });
-
-const htmlPreview = (markdown: string) => `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <title>Requirements then SDLC</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown.min.css"/>
-  <style>body{box-sizing:border-box;min-width:200px;max-width:980px;margin:0 auto;padding:45px;}</style>
-</head>
-<body class="markdown-body">
-  <div id="content"></div>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    document.getElementById('content').innerHTML = marked.parse(${JSON.stringify(markdown)});
-  </script>
-</body>
-</html>
-`;
-
+const publish = createStep({
+  id: 'write-review-artifacts', description: 'Export draft HTML, PDF, Markdown, JSON, traceability CSV and audit history.',
+  inputSchema: plannedSchema, outputSchema,
+  execute: async ({ inputData }) => exportAnalysis(inputData, workspaceRoot),
+});
 export const requirementsThenSdlc = createWorkflow({
-  id: 'requirements-then-sdlc',
-  description: 'Two-agent course flow: list requirements, then select a justified SDLC. Writes artifacts/evaluation/latest.md and latest.html.',
-  inputSchema: z.object({ prompt: z.string() }),
-  outputSchema: z.object({
-    requirements: z.string(),
-    sdlc: z.string(),
-    document: z.string(),
-    markdownPath: z.string(),
-    htmlPath: z.string(),
-  }),
-})
-  .then(listRequirements)
-  .then(selectSdlc)
-  .then(writePreview)
-  .commit();
+  id: 'requirements-then-sdlc', description: 'Domain-specific requirements agent -> validation -> ranked SDLC agent -> review artifacts.',
+  inputSchema: briefSchema, outputSchema,
+}).then(prepare).then(requirements).then(lifecycle).then(publish).commit();
 
-export const runRequirementsThenSdlc = async (prompt: string) => {
+export const runRequirementsThenSdlc = async (prompt: string,profile:Partial<ProjectProfile>={}) => {
   const run = await requirementsThenSdlc.createRun();
-  const result = await run.start({ inputData: { prompt } });
-  if (result.status !== 'success') {
-    const message = result.status === 'failed' ? result.error.message : result.status;
-    throw new Error(`Workflow failed: ${message}`);
-  }
+  const result = await run.start({ inputData: { prompt,...profile } });
+  if (result.status !== 'success') throw new Error(`Workflow failed: ${result.status === 'failed' ? result.error.message : result.status}`);
   return result.result;
 };

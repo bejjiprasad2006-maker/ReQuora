@@ -11,3 +11,6 @@ dist
 *.duckdb
 *.duckdb.wal
 artifacts/
+*.sqlite
+*.sqlite-*
+master-key.*

@@ -1,102 +1,27 @@
-import type { InputProcessorOrWorkflow, ProcessInputArgs, ProcessInputResult } from '@mastra/core/processors';
-import { architectWorkspace } from './workspace';
+﻿import type { InputProcessorOrWorkflow, ProcessInputArgs, ProcessInputResult } from '@mastra/core/processors';
+import { searchEvidence, evidenceContext } from '../domain/retrieval';
+import { redactSensitiveData } from '../domain/privacy';
+import { workspaceRoot } from './workspace';
 
-const SKIP_IDS = /(?:clarify|specify|analyze)-command/i;
-const MAX_HIT_CHARS = 1200;
-const TOP_K = 5;
-const SDLC_QUERY = 'secure software development lifecycle SSDLC application security lifecycle threat modelling VA PT iterative systems engineering';
-
-const partText = (part: unknown): string => {
-  if (typeof part === 'string') return part;
-  if (!part || typeof part !== 'object') return '';
-  const record = part as Record<string, unknown>;
-  if (typeof record.text === 'string') return record.text;
-  if (typeof record.content === 'string') return record.content;
-  return '';
-};
-
-const messageText = (message: { content?: unknown }): string => {
-  const content = message.content;
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content)) return content.map(partText).join('\n');
-  if (content && typeof content === 'object') {
-    const record = content as Record<string, unknown>;
-    if (typeof record.content === 'string') return record.content;
-    if (Array.isArray(record.parts)) return record.parts.map(partText).join('\n');
-  }
-  return '';
-};
-
-const queryFromMessages = (messages: Array<{ role?: string; content?: unknown }>) => {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (message?.role !== 'user') continue;
-    const text = messageText(message).replace(/(^|\s)\/pdf\b/gi, ' ').trim();
-    if (text && !text.startsWith('/')) return text;
-  }
-  return '';
-};
-
-export const retrieveEvidence = async (query: string) => {
-  const trimmed = query.trim();
-  if (trimmed.length < 8) return [];
-  const results = await architectWorkspace.search(trimmed, { mode: 'bm25', topK: TOP_K });
-  return results.filter((hit) => !SKIP_IDS.test(hit.id));
-};
-
-const uniqueHits = (...lists: Array<Array<{ id: string; content: string }>>) => {
-  const seen = new Set<string>();
-  const merged: Array<{ id: string; content: string }> = [];
-  for (const list of lists) {
-    for (const hit of list) {
-      if (seen.has(hit.id)) continue;
-      seen.add(hit.id);
-      merged.push(hit);
-    }
-  }
-  return merged.slice(0, 8);
-};
-
-export const formatEvidence = (hits: Array<{ id: string; content: string }>) => {
-  if (hits.length === 0) {
-    return [
-      'Retrieved evidence: none.',
-      'Mark every regulatory, security, and numeric claim NEEDS-VALIDATION.',
-      'Do not invent thresholds or legal applicability.',
-    ].join('\n');
-  }
-
-  const blocks = hits.map((hit, index) => {
-    const excerpt = hit.content.replace(/\s+/g, ' ').trim().slice(0, MAX_HIT_CHARS);
-    return `[${index + 1}] ${hit.id}\n${excerpt}`;
-  });
-  return [
-    'Retrieved evidence from docs/ingested (already searched — do not call search tools).',
-    'Treat retrieved spec-kit command files as irrelevant. Do not interview.',
-    ...blocks,
-  ].join('\n\n');
-};
-
+export const retrieveEvidence = (query: string) => searchEvidence(workspaceRoot, query);
+export const formatEvidence = evidenceContext;
 export const assertCorpusSearchable = async () => {
-  const hits = await retrieveEvidence('KYC NIST CSF ISO 20022 RBI payment security');
-  if (hits.length === 0) {
-    throw new Error('Workspace BM25 index returned no hits; docs/ingested was not indexed');
-  }
+  if (!(await retrieveEvidence('ecommerce checkout inventory payment lifecycle')).length) throw new Error('E-commerce evidence corpus is missing or empty.');
 };
-
 export const ragContextProcessor = {
-  id: 'rag-context-processor',
-  name: 'RAG Context',
+  id: 'ecommerce-rag-context', name: 'E-commerce RAG context',
   async processInput({ messages, systemMessages }: ProcessInputArgs): Promise<ProcessInputResult> {
-    const query = queryFromMessages(messages);
-    if (!query) return { messages, systemMessages };
-    const evidence = formatEvidence(uniqueHits(
-      await retrieveEvidence(query),
-      await retrieveEvidence(SDLC_QUERY),
-    ));
-    return {
-      messages,
-      systemMessages: [...systemMessages, { role: 'system', content: evidence }],
-    };
+    // The workflow has already redacted input and attached the exact audited evidence set.
+    if (JSON.stringify(messages).includes('RIKU_EVIDENCE_ATTACHED')) return { messages, systemMessages };
+    const safeMessages = messages.map(message => {
+      if (message.role !== 'user') return message;
+      const parts = message.content.parts.map(part => part.type === 'text' ? { ...part, text: redactSensitiveData(part.text).text } : part);
+      return { ...message, content: { ...message.content, parts, content: typeof message.content.content === 'string' ? redactSensitiveData(message.content.content).text : message.content.content } };
+    });
+    const latest = [...safeMessages].reverse().find(message => message.role === 'user');
+    const query = latest?.content.parts.flatMap(part => part.type === 'text' ? [part.text] : []).join('\n') ?? '';
+    const domain = /"domain"\s*:\s*"finance"/.test(query) ? 'finance' : 'ecommerce';
+    const evidence = await searchEvidence(workspaceRoot, query + ' software security SDLC', domain);
+    return { messages: safeMessages, systemMessages: [...systemMessages, { role: 'system', content: formatEvidence(evidence) }] };
   },
 } as InputProcessorOrWorkflow;

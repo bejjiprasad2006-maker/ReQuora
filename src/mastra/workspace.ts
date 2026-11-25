@@ -15,9 +15,8 @@ export const architectWorkspace = new Workspace({
   filesystem: new LocalFilesystem({ basePath: workspaceRoot, readOnly: true }),
   bm25: true,
   autoIndexPaths: [
-    'docs/ingested/**/*.txt',
-    'docs/ingested/**/*.md',
-    'docs/ingested/**/*.yaml',
+    'docs/ingested/ecommerce/**/*.md',
+    'docs/ingested/financial/**/*.md',
   ],
   skills: ['skills'],
   tools: { enabled: false },
