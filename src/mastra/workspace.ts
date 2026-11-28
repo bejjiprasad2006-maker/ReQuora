@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { LocalFilesystem, Workspace } from '@mastra/core/workspace';
 
 export const workspaceRoot = [
+  process.env.REQUORA_WORKSPACE_ROOT,
   process.env.RIKU_WORKSPACE_ROOT,
   process.env.INIT_CWD,
   process.cwd(),
@@ -11,12 +12,14 @@ export const workspaceRoot = [
   ?? process.cwd();
 
 export const architectWorkspace = new Workspace({
-  id: 'architect-workspace',
+  id: 'requora-workspace',
   filesystem: new LocalFilesystem({ basePath: workspaceRoot, readOnly: true }),
   bm25: true,
   autoIndexPaths: [
-    'docs/ingested/ecommerce/**/*.md',
-    'docs/ingested/financial/**/*.md',
+    'docs/ingested/ecommerce/**/*.txt',
+    'docs/ingested/product/**/*.txt',
+    'docs/ingested/requirements/**/*.txt',
+    'docs/ingested/security/**/*.txt',
   ],
   skills: ['skills'],
   tools: { enabled: false },

@@ -1,50 +1,50 @@
-﻿import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { constants } from 'node:fs';
+import { access, mkdir, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { promisify } from 'node:util';
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-export const createPdf = async (title: string, markdown: string) => {
-  const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  pdf.setTitle(title); pdf.setProducer('RikuAI');
-  const ascii = markdown.replace(/[\u2010-\u2015]/g, '-').replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/[^\x20-\x7e\n\r\t]/g, '?');
-  let page = pdf.addPage([595, 842]), y = 792, pageNumber = 1;
-  const footer = () => page.drawText(`RikuAI | DRAFT - human review required | ${pageNumber}`, { x: 40, y: 24, size: 8, font, color: rgb(0.4, 0.5, 0.5) });
-  footer();
-  for (const sourceLine of ascii.split(/\r?\n/)) {
-    let line = '';
-    // Break long URLs/hashes as well as prose; no content can run beyond the page edge.
-    const chunks = sourceLine.match(/.{1,90}(?:\s|$)|.{1,90}/g) ?? [''];
-    for (const chunk of chunks) {
-      const heading = /^#{1,3} /.test(chunk), size = heading ? 12 : 9;
-      line = chunk.replace(/^#{1,6} /, '');
-      while (font.widthOfTextAtSize(line, size) > 515 && line.length) {
-        // Conservative 90-character wrapping normally fits; this handles wide glyph sequences.
-        const fit = Math.max(1, Math.floor(line.length * 510 / font.widthOfTextAtSize(line, size)));
-        if (y < 52) { page = pdf.addPage([595, 842]); y = 792; pageNumber++; footer(); }
-        page.drawText(line.slice(0, fit), { x: 40, y, size, font }); y -= 15;
-        line = line.slice(fit);
-      }
-      if (y < 52) { page = pdf.addPage([595, 842]); y = 792; pageNumber++; footer(); }
-      page.drawText(line, { x: 40, y, size, font }); y -= heading ? 20 : 14;
-    }
+const run = promisify(execFile);
+
+const findPdfBinary = async () => {
+  const candidates = [
+    process.env.MAKE_PDF_BIN,
+    resolve('.agents/skills/gstack/make-pdf/dist/pdf'),
+    join(homedir(), '.gstack/repos/gstack/make-pdf/dist/pdf'),
+  ].filter((path): path is string => Boolean(path));
+
+  for (const path of candidates) {
+    try {
+      await access(path, constants.X_OK);
+      return path;
+    } catch {}
   }
-  return pdf.save();
+  throw new Error('PDF renderer unavailable. Set MAKE_PDF_BIN or build the gstack make-pdf skill.');
 };
-export const renderEcommercePdf = async (title: string, markdown: string) => {
-  const directory = resolve('artifacts/ecommerce/pdf');
-  await mkdir(directory, { recursive: true });
-  const pdfPath = join(directory, `${randomUUID()}.pdf`);
-  await writeFile(pdfPath, await createPdf(title, markdown));
+
+export const renderFinancePdf = async (title: string, markdown: string) => {
+  const outputDir = resolve('artifacts/finance');
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'finance-document';
+  const markdownPath = join(outputDir, `${slug}.md`);
+  const pdfPath = join(outputDir, `${slug}.pdf`);
+  await mkdir(outputDir, { recursive: true });
+  await writeFile(markdownPath, `# ${title}\n\n${markdown.trim()}\n`, 'utf8');
+  await run(await findPdfBinary(), ['generate', '--cover', '--toc', markdownPath, pdfPath]);
   return pdfPath;
 };
-// Preserve the former public export for integrations.
-export const renderFinancePdf = renderEcommercePdf;
+
 export const renderPdfTool = createTool({
-  id: 'render-ecommerce-pdf', description: 'Render a completed e-commerce SRS and SDLC report to a local PDF.',
-  inputSchema: z.object({ title: z.string().min(3).max(120), markdown: z.string().min(100) }),
+  id: 'render-finance-pdf',
+  description: 'Render a completed Markdown finance requirements document to PDF. Use for /PDF or an explicit PDF request.',
+  inputSchema: z.object({
+    title: z.string().min(3).max(120),
+    markdown: z.string().min(100),
+  }),
   outputSchema: z.object({ pdfPath: z.string() }),
-  execute: async ({ title, markdown }) => ({ pdfPath: await renderEcommercePdf(title, markdown) }),
+  execute: async ({ title, markdown }) => ({
+    pdfPath: await renderFinancePdf(title, markdown),
+  }),
 });

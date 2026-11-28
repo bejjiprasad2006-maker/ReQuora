@@ -1,0 +1,18 @@
+# E-Commerce Security, Privacy & Regulatory Compliance Controls
+Source: ReQuora AI E-Commerce Compliance Reference v1.0 | Standards: PCI-DSS v4.0, OWASP ASVS/API Top 10, GDPR / India DPDP Act 2023, Consumer Protection (E-Commerce) Rules
+
+## 1. Payment Security (PCI-DSS v4.0)
+- Cardholder Data Minimization: Never store raw PAN, CVV/CVC, or magnetic stripe data on platform servers; delegate card capture to PCI-DSS Level 1 payment gateways via hosted fields or tokenization.
+- Transport & Storage Encryption: Enforce TLS 1.2+ (TLS 1.3 preferred) for all external and internal payment/PII traffic; AES-256 encryption at rest for PII, tokens, and audit logs.
+- Strong Customer Authentication: Support 3DS2 / RBI e-mandate / OTP / UPI PIN authentication flows and webhook HMAC signature verification before marking orders paid.
+
+## 2. Consumer Data Privacy (GDPR & India DPDP Act 2023)
+- Explicit Consent & Purpose Limitation: Capture granular user consent for marketing communications, analytics cookies, and third-party data sharing; separate essential transactional notices from promotional messages.
+- Data Subject Rights: Provide self-service or verified workflows for data export, correction, consent withdrawal, and account deletion/anonymization while retaining legally mandated tax/invoice records.
+- PII Protection & Access Control: Mask PII in logs and non-production environments; enforce RBAC (Customer, Vendor/Seller, Support, Finance, SuperAdmin) with MFA for privileged/admin portals.
+
+## 3. E-Commerce Consumer Protection & Fraud Controls
+- Price & Fee Transparency: Display itemized base price, taxes (GST/VAT), shipping charges, discounts, and final payable amount prior to order confirmation; prohibit hidden drip pricing.
+- Seller & Return Policy Disclosure: Clearly display seller identity, estimated delivery dates, cancellation rules, and refund timelines prior to checkout.
+- Abuse & Fraud Prevention: Rate-limit login, coupon redemption, and payment attempts; detect velocity anomalies, mismatched billing/shipping high-risk COD orders, and bot scraping.
+- Audit Trails: Maintain tamper-evident logs of admin catalog/price overrides, manual refunds, and RBAC permission changes for >= 180 days (or jurisdictional tax retention period).

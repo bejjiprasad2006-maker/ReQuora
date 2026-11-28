@@ -1,14 +1,13 @@
 import { Mastra } from '@mastra/core/mastra';
 import { LibSQLStore } from '@mastra/libsql';
 import { architectAgent } from './architect-agent';
-import { requirementsAgent, sdlcSelectionAgent, qualityReviewAgent, clarificationAgent } from './ecommerce-agents';
+import { requirementsAgent, sdlcSelectionAgent } from './finance-agents';
 import { assertCorpusSearchable } from './rag';
 import { requirementsThenSdlc } from './workflow';
 import { architectWorkspace } from './workspace';
 
 export const mastra = new Mastra({
-  server: { host: '127.0.0.1' },
-  agents: { architectAgent, requirementsAgent, sdlcSelectionAgent, qualityReviewAgent, clarificationAgent },
+  agents: { architectAgent, requirementsAgent, sdlcSelectionAgent },
   workflows: { requirementsThenSdlc },
   storage: new LibSQLStore({
     id: 'architect-storage',

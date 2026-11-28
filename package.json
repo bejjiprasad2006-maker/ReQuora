@@ -1,27 +1,23 @@
 {
-  "name": "riku-ai",
-  "version": "3.0.0",
+  "name": "requora-ai",
+  "version": "1.0.0",
   "private": true,
+  "description": "ReQuora AI — Agentic E-Commerce Requirements Engineering, SDLC Selection & IEEE 830-1998 SRS Generator",
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=22.22.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "tsx src/platform/server.ts",
-    "build": "mastra build && node scripts/build-platform.mjs",
-    "start": "node dist/platform/server.mjs",
+    "app": "tsx src/server.ts",
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "mastra:dev": "mastra dev",
+    "mastra:build": "mastra build",
+    "build": "tsc --noEmit && mastra build",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test && npm run build",
-    "demo": "tsx src/cli.ts demo",
-    "analyse": "tsx src/cli.ts analyse",
-    "doctor": "tsx src/cli.ts doctor",
-    "benchmark": "tsx src/cli.ts benchmark",
-    "review": "tsx src/cli.ts review",
-    "test": "tsx --test tests/*.test.ts",
-    "studio": "mastra dev",
-    "studio:start": "mastra start",
-    "build:workspace": "node scripts/build-platform.mjs"
+    "test": "tsx src/requora/self-check.ts",
+    "check": "npm run typecheck && npm test && npm run mastra:build"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.25",
@@ -31,17 +27,12 @@
     "@mastra/memory": "^1.26.0",
     "ai": "^7.0.55",
     "dotenv": "^17.4.2",
-    "jszip": "^3.10.2",
-    "mammoth": "^1.13.0",
-    "otpauth": "^9.6.0",
-    "pdf-lib": "^1.17.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "latest",
-    "esbuild": "^0.28.2",
     "mastra": "^1.23.0",
-    "tsx": "^4.23.15",
+    "tsx": "^4.19.3",
     "typescript": "^6.0.3"
   }
 }

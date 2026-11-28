@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ReQuora AI — E-Commerce Requirements & IEEE 830-1998 SRS Studio</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar no-print">
+    <div class="brand">
+      <div class="brand-badge">RQ</div>
+      <div>
+        <div class="brand-title">ReQuora AI</div>
+        <div class="brand-sub">E-Commerce Requirements • SDLC Percentage Engine • IEEE 830-1998 SRS</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div id="healthPill" class="health-pill health-checking">Checking LLM…</div>
+      <button id="newChatBtn" class="btn btn-primary" type="button">+ New Chat</button>
+      <button id="historyBtn" class="btn btn-secondary" type="button">History (<span id="historyCount">0</span>)</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="composer card no-print">
+      <div class="composer-header">
+        <div>
+          <h1>Describe Your E-Commerce Project in 1–2 Lines</h1>
+          <p class="muted">
+            ReQuora AI transforms a short e-commerce brief into a detailed project overview, MCDA-scored SDLC recommendation with percentages across all models, structured requirements, and an IEEE 830-1998 SRS.
+          </p>
+        </div>
+        <span class="domain-pill">Domain: E-Commerce</span>
+      </div>
+
+      <form id="briefForm">
+        <textarea
+          id="briefInput"
+          rows="3"
+          maxlength="1200"
+          placeholder="Example: A multi-vendor sustainable fashion marketplace with real-time inventory tracking, seller payouts, and UPI/card checkout."
+          required
+        ></textarea>
+
+        <div class="examples-row">
+          <span class="examples-label">Try a brief:</span>
+          <button type="button" class="chip" data-brief="A multi-vendor sustainable fashion marketplace with real-time inventory tracking, automated seller payouts, and UPI/card checkout.">Multi-Vendor Fashion</button>
+          <button type="button" class="chip" data-brief="A 15-minute quick-commerce grocery delivery app with dark-store stock sync, live courier tracking, and wallet/UPI payments.">Quick-Commerce Grocery</button>
+          <button type="button" class="chip" data-brief="A B2B wholesale electronics procurement portal with tiered bulk pricing, GST invoicing, and net-30 credit approval.">B2B Wholesale Portal</button>
+          <button type="button" class="chip" data-brief="A D2C skincare e-commerce storefront with personalized routine recommendations, subscription refills, and self-service returns.">D2C Skincare Subscriptions</button>
+        </div>
+
+        <div class="composer-footer">
+          <div id="charInfo" class="muted small">Enter 1–2 concise sentences (min 10 characters).</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button id="composerResetBtn" type="button" class="btn btn-secondary">Clear / New Chat</button>
+            <button id="generateBtn" type="submit" class="btn btn-primary">
+              Generate Overview, SDLC & IEEE 830 SRS
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section id="pipelinePanel" class="card pipeline-panel hidden no-print">
+      <div class="pipeline-top">
+        <strong>Multi-Agent Execution Pipeline</strong>
+        <span id="pipelinePct" class="badge badge-accent">0%</span>
+      </div>
+      <div class="progress-track">
+        <div id="progressBar" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <div id="pipelineMessage" class="pipeline-msg">Starting…</div>
+      <div class="agent-steps">
+        <div class="agent-step" data-stage="rag">1. RAG Grounding</div>
+        <div class="agent-step" data-stage="overview">2. Overview Analyst</div>
+        <div class="agent-step" data-stage="requirements">3. Requirements</div>
+        <div class="agent-step" data-stage="sdlc">4. SDLC & Percentages</div>
+        <div class="agent-step" data-stage="srs">5. IEEE 830-1998 SRS</div>
+      </div>
+    </section>
+
+    <section id="errorBanner" class="error-banner hidden no-print"></section>
+
+    <section id="resultsSection" class="hidden">
+      <div class="results-toolbar card no-print">
+        <div>
+          <h2 id="resProjectTitle">Project Specification</h2>
+          <div id="resMeta" class="muted small"></div>
+        </div>
+        <div class="export-actions">
+          <button id="exportMdBtn" class="btn btn-secondary" type="button">Download Full .md</button>
+          <button id="exportSrsBtn" class="btn btn-secondary" type="button">Download IEEE SRS .md</button>
+          <button id="exportHtmlBtn" class="btn btn-secondary" type="button">Download .html</button>
+          <button id="exportJsonBtn" class="btn btn-secondary" type="button">JSON</button>
+          <button id="printBtn" class="btn btn-primary" type="button">Print / Save PDF</button>
+        </div>
+      </div>
+
+      <nav class="tabs no-print" role="tablist">
+        <button class="tab active" data-tab="overview" type="button">1. Project Overview</button>
+        <button class="tab" data-tab="sdlc" type="button">2. SDLC & Percentages</button>
+        <button class="tab" data-tab="requirements" type="button">3. Requirements (<span id="reqTabCount">0</span>)</button>
+        <button class="tab" data-tab="srs" type="button">4. IEEE 830-1998 SRS</button>
+      </nav>
+
+      <div id="tab-overview" class="tab-panel active"></div>
+      <div id="tab-sdlc" class="tab-panel"></div>
+      <div id="tab-requirements" class="tab-panel"></div>
+      <div id="tab-srs" class="tab-panel"></div>
+    </section>
+  </main>
+
+  <aside id="historyDrawer" class="drawer hidden no-print">
+    <div class="drawer-header">
+      <strong>Saved Specifications</strong>
+      <button id="closeHistoryBtn" class="btn btn-secondary" type="button">Close</button>
+    </div>
+    <div id="historyList" class="history-list"></div>
+  </aside>
+
+  <script src="/app.js"></script>
+</body>
+</html>

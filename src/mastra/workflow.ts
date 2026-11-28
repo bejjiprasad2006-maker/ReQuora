@@ -1,38 +1,62 @@
-﻿import { createStep, createWorkflow } from '@mastra/core/workflows';
-import { briefSchema } from '../domain/schemas';
-import { prepareAnalysis, extractRequirements, selectLifecycle, exportAnalysis, preparedSchema, extractedSchema, plannedSchema, outputSchema } from '../domain/analysis';
-import { liveAgents } from './generation';
+import { join } from 'node:path';
+import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { z } from 'zod';
+import { renderFullReportMarkdown } from '../requora/export';
+import { runReQuoraPipeline } from '../requora/pipeline';
 import { workspaceRoot } from './workspace';
-import type { ProjectProfile } from '../domain/profile';
 
-const prepare = createStep({
-  id: 'prepare-ecommerce-brief', description: 'Validate and redact input; retrieve allowlisted domain evidence.',
-  inputSchema: briefSchema, outputSchema: preparedSchema,
-  execute: async ({ inputData }) => prepareAnalysis(inputData.prompt, workspaceRoot, [], inputData),
+const artifactsDir = join(workspaceRoot, 'artifacts', 'requora');
+
+const runFullReQuora = createStep({
+  id: 'run-requora-ecommerce-pipeline',
+  description: 'Runs Overview, Requirements (min 6+), MCDA SDLC Percentages, and IEEE 830-1998 SRS (no UML).',
+  inputSchema: z.object({ prompt: z.string() }),
+  outputSchema: z.object({
+    requirements: z.string(),
+    sdlc: z.string(),
+    document: z.string(),
+    markdownPath: z.string(),
+    htmlPath: z.string(),
+  }),
+  execute: async ({ inputData }) => {
+    const run = await runReQuoraPipeline(inputData.prompt);
+    const document = renderFullReportMarkdown(run);
+    const requirements = run.requirements
+      .map((r) => `- **${r.id} [${r.type}/${r.category}/${r.priority}]:** ${r.statement}`)
+      .join('\n');
+    const sdlc = `Recommended: **${run.sdlc.recommendedName} (${run.sdlc.recommendedPercentage}%)**\n\n${run.sdlc.perfectFitSummary}`;
+    return {
+      requirements,
+      sdlc,
+      document,
+      markdownPath: join(artifactsDir, 'latest.md'),
+      htmlPath: join(artifactsDir, 'latest.html'),
+    };
+  },
 });
-const requirements = createStep({
-  id: 'list-requirements', description: 'Agent (i): structured requirements, stories, use cases, risks, factors and reference checks.',
-  inputSchema: preparedSchema, outputSchema: extractedSchema,
-  execute: async ({ inputData }) => extractRequirements(inputData, liveAgents),
-});
-const lifecycle = createStep({
-  id: 'select-sdlc', description: 'Rank seven models, then Agent (ii) explains the choice and builds delivery gates.',
-  inputSchema: extractedSchema, outputSchema: plannedSchema,
-  execute: async ({ inputData }) => selectLifecycle(inputData, liveAgents),
-});
-const publish = createStep({
-  id: 'write-review-artifacts', description: 'Export draft HTML, PDF, Markdown, JSON, traceability CSV and audit history.',
-  inputSchema: plannedSchema, outputSchema,
-  execute: async ({ inputData }) => exportAnalysis(inputData, workspaceRoot),
-});
+
 export const requirementsThenSdlc = createWorkflow({
-  id: 'requirements-then-sdlc', description: 'Domain-specific requirements agent -> validation -> ranked SDLC agent -> review artifacts.',
-  inputSchema: briefSchema, outputSchema,
-}).then(prepare).then(requirements).then(lifecycle).then(publish).commit();
+  id: 'requora-ecommerce-srs',
+  description:
+    'ReQuora AI E-Commerce Pipeline: generates detailed overview, SDLC percentages & comparison, min 6+ requirements, and IEEE 830-1998 SRS (no UML).',
+  inputSchema: z.object({ prompt: z.string() }),
+  outputSchema: z.object({
+    requirements: z.string(),
+    sdlc: z.string(),
+    document: z.string(),
+    markdownPath: z.string(),
+    htmlPath: z.string(),
+  }),
+})
+  .then(runFullReQuora)
+  .commit();
 
-export const runRequirementsThenSdlc = async (prompt: string,profile:Partial<ProjectProfile>={}) => {
+export const runRequirementsThenSdlc = async (prompt: string) => {
   const run = await requirementsThenSdlc.createRun();
-  const result = await run.start({ inputData: { prompt,...profile } });
-  if (result.status !== 'success') throw new Error(`Workflow failed: ${result.status === 'failed' ? result.error.message : result.status}`);
+  const result = await run.start({ inputData: { prompt } });
+  if (result.status !== 'success') {
+    const message = result.status === 'failed' ? result.error.message : result.status;
+    throw new Error(`Workflow failed: ${message}`);
+  }
   return result.result;
 };

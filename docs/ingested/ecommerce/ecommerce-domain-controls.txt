@@ -1,0 +1,18 @@
+# E-Commerce Domain Architecture & Functional Reference (ReQuora AI Knowledge Base)
+Source: ReQuora AI E-Commerce Reference Baseline v1.0 | Effective: 2026-01-01 | Applicability: B2C, D2C, B2B, and Multi-Vendor E-Commerce Platforms
+
+## 1. Core E-Commerce Lifecycle Capabilities
+- Catalog & Product Management: SKU hierarchy, variant attributes (size, color, weight), rich media, pricing tiers, tax codes (HSN/SAC), seller/merchant ownership, bulk import, and publish/unpublish states.
+- Discovery, Search & Filtering: Full-text and faceted search (category, price range, ratings, availability, brand), sort orders, pagination, and zero-result fallback suggestions.
+- Shopping Cart & Session Persistence: Guest cart persistence via secure session token, authenticated cart merge on login, item quantity bounds, coupon/promo code validation, real-time stock and price re-verification before checkout.
+- Inventory Reservation & Concurrency Control: Soft reservation during checkout window (e.g., 10–15 minutes TTL) with atomic stock decrement on payment confirmation to prevent overselling during flash sales.
+- Checkout & Payment Orchestration: Address validation, shipping method/rate calculation, tax calculation, idempotent payment intent creation, multi-rail payments (cards, UPI, net banking, wallets, BNPL, COD with fraud threshold), 3D Secure 2 (3DS2) / SCA challenge handling, and webhook-verified payment settlement.
+- Order Management & Fulfillment: Order state machine (PendingPayment -> Confirmed -> Packed -> Shipped -> OutForDelivery -> Delivered -> Completed / Cancelled / Returned), split shipments for multi-vendor orders, digital invoice generation, carrier tracking updates.
+- Returns, Refunds & Grievance Redressal: Eligibility window check, RMA (Return Merchandise Authorization) generation, reverse pickup scheduling, inspection state, automated/approved refund to original payment method or store credit, and grievance ticket SLA tracking.
+- Notifications & Auditability: Idempotent transactional emails/SMS/push alerts (order confirmation, dispatch, refund) and immutable audit logs for price changes, order state transitions, refunds, and admin actions.
+
+## 2. E-Commerce Non-Functional & Reliability Benchmarks
+- Checkout & Catalog Latency: Catalog/search API p95 <= 500 ms; 90% of interactive queries <= 1.0 s under nominal load.
+- Availability & Resilience: >= 99.9% monthly uptime for storefront and checkout; graceful degradation of recommendations/reviews without blocking checkout.
+- Peak Concurrency: Support flash-sale traffic bursts (e.g., 5x-10x baseline RPS) with rate limiting, idempotency keys on payment/order endpoints, and circuit breakers for third-party payment/shipping APIs.
+- Data Integrity: Zero duplicate charges on network retries (mandatory idempotency keys); zero negative inventory balances via transactional/optimistic locking.

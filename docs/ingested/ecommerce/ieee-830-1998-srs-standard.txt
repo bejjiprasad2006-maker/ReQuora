@@ -1,0 +1,38 @@
+# IEEE 830-1998 Standard for Software Requirements Specifications (ReQuora AI Profile)
+Source: IEEE Std 830-1998 & Software Engineering Requirements Specification Guidelines (No-UML Profile)
+
+## Required Document Structure (Strict Order)
+Title & Document Metadata
+Table of Contents
+1. Introduction
+   1.1 Purpose — Describe the purpose of the system and the intended audience (customers, analysts, developers, testers, project managers).
+   1.2 Scope — Define what the software system will and will not do (explicit in-scope and out-of-scope boundaries).
+   1.3 Definitions, Acronyms, and Abbreviations — Define all domain and technical terms used in the SRS.
+   1.4 References — List all referenced standards, regulations, and source documents.
+   1.5 Overview — Describe how the rest of the SRS is organized.
+2. Overall Description
+   2.1 Product Perspective — Present business case, operational concept, and system context (external system, user, hardware, software, communications interfaces, operational/memory constraints).
+   2.2 Product Functions — Summarize major functional capabilities in end-user terminology.
+   2.3 User Characteristics — Describe each user class, role, and technical proficiency level.
+   2.4 Constraints — Regulatory policies, target platform, database/network constraints, standards compliance.
+   2.5 Assumptions and Dependencies — Explicit labeled assumptions (A-#) and third-party/external dependencies.
+3. Specific Requirements
+   3.1 External Interfaces — Detail all User, Hardware, Software, and Communications interfaces (inputs, outputs, formats, protocols; complement Section 2 without duplicating).
+   3.2 Functions — Detailed black-box functional requirements (minimum 6, no upper limit). Each function specifies: Overview/Purpose, Inputs (source, range/validation), Processing & Abnormal Situations (validation, exact behavior, error responses), Outputs (destination, format), Acceptance Criteria, and Verification Method. Complex branching logic uses Decision Tables or textual Decision Trees.
+   3.3 Performance Requirements — Measurable, verifiable latency, throughput, capacity, and concurrency metrics (e.g., "90% of searches shall return results in under 1.0 second").
+   3.4 Logical Database Requirements — Data entities, key attributes, relationships, integrity rules, and retention policies expressed in structured text/tables (NO UML diagrams).
+   3.5 Design Constraints — Standards compliance, supported browsers/devices, database/security mandates.
+   3.6 Software System Quality Attributes — Measurable, verifiable Reliability, Availability, Security, Maintainability, Portability, and Usability requirements.
+   (Note: Section 3.7 Object-Oriented Models / UML Diagrams is intentionally OMITTED.)
+Appendices
+   Appendix A: Requirements Traceability Matrix (RTM)
+   Appendix B: Decision Table for Complex Processing Logic
+   Appendix C: Risk & Compliance Control Mapping
+Index
+
+## Mandatory SRS Quality & Writing Rules
+- Black-box specification: Specify WHAT the system must do in terms of external input-output behavior, NOT HOW to implement it internally.
+- Properties of a good SRS: Concise, Unambiguous, Consistent, Complete, Traceable, Verifiable, Modifiable/Well-structured.
+- Exclude from SRS body: Project development plans (cost, staffing, schedules, methods, tools), Product assurance plans (test plans, CM, QA plans), and internal implementation design.
+- Avoid SRS defects: Unstructured narrative essays, Noise (irrelevant text), Silence (omitted edge cases/invalid input handling), Overspecification (dictating internal algorithms/sorting/storage internals), Contradictions, Ambiguity (unquantifiable phrases like "user-friendly" or "fast"), Forward references, Wishful thinking.
+- Write in short, active-voice sentences; split compound requirements into separately testable and traceable sub-requirements.
